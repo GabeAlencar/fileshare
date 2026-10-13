@@ -365,13 +365,12 @@ PAGE = r"""<!doctype html>
   header .me { color: var(--muted); font-size: 13px; }
   main { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px 20px; }
   @media (max-width: 680px) { main { grid-template-columns: 1fr; } }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  section { padding: 0; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
        margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
   button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--text);
            border-radius: 6px; padding: 4px 10px; cursor: pointer; }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .devices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
   .devices li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
                 cursor: pointer; border: 1px solid transparent; }
@@ -382,7 +381,7 @@ PAGE = r"""<!doctype html>
   .on .dot { background: var(--ok); }
   .devices .os { margin-left: auto; color: var(--muted); font-size: 12px; }
   .right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-  #drop { border: 2px dashed var(--line); border-radius: 10px; padding: 40px 16px; text-align: center;
+  #drop { border: 1px dashed var(--line); border-radius: 10px; padding: 32px 16px; text-align: center;
           color: var(--muted); cursor: pointer; transition: all .15s; }
   #drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
   #drop strong { color: var(--text); display: block; font-size: 16px; margin-bottom: 4px; }
@@ -395,8 +394,6 @@ PAGE = r"""<!doctype html>
   .muted { color: var(--muted); }
   .bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; width: 90px; }
   .bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
-  label.auto { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0;
-               display: flex; gap: 4px; align-items: center; }
   #banner { margin: 16px 20px 0; padding: 10px 14px; border-radius: 8px; display: none;
             background: var(--accent-soft); border: 1px solid var(--err); }
 </style>
@@ -410,7 +407,7 @@ PAGE = r"""<!doctype html>
 <div id="banner" class="err"></div>
 <main>
   <section>
-    <h2>Devices <button id="refresh" title="Refresh devices">&#x21bb;</button></h2>
+    <h2>Devices</h2>
     <ul class="devices" id="devices"><li class="muted">Loading…</li></ul>
   </section>
   <div class="right">
@@ -423,11 +420,7 @@ PAGE = r"""<!doctype html>
     <section>
       <h2>
         <span>Received</span>
-        <span style="display:flex; gap:8px; align-items:center">
-          <label class="auto"><input type="checkbox" id="auto" checked> auto-check</label>
-          <button id="check" class="primary">Check now</button>
-          <button id="folder">Open folder</button>
-        </span>
+        <button id="folder">Open folder</button>
       </h2>
       <div class="muted" id="recvStatus"></div>
       <ul class="list" id="received"></ul>
@@ -542,30 +535,25 @@ async function loadReceived(highlight = []) {
   } catch (e) { banner(e.message); }
 }
 
-async function checkIncoming(manual) {
+async function checkIncoming() {
   if (checking) return;
   checking = true;
-  if (manual) $("recvStatus").textContent = "Checking…";
   try {
     const { new: got } = await api("POST", "/api/receive");
     await loadReceived(got);
     if (got.length) {
       document.title = `(${got.length}) FileShare`;
       setTimeout(() => document.title = "FileShare", 5000);
-    } else if (manual && !$("received").children.length) {
-      $("recvStatus").textContent = "No new files.";
     }
-  } catch (e) { if (manual) banner(e.message); else $("recvStatus").textContent = e.message; }
+  } catch (e) { $("recvStatus").textContent = e.message; }
   checking = false;
 }
 
-$("refresh").onclick = loadDevices;
-$("check").onclick = () => checkIncoming(true);
 $("folder").onclick = () => api("POST", "/api/open").catch(e => banner(e.message));
 
 loadDevices();
-loadReceived().then(() => checkIncoming(false));
-setInterval(() => { if ($("auto").checked) checkIncoming(false); }, 5000);
+loadReceived().then(checkIncoming);
+setInterval(() => checkIncoming(false), 5000);
 setInterval(loadDevices, 30000);
 </script>
 </body>

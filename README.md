@@ -26,7 +26,7 @@ It opens in its own window when Chrome, Edge or Chromium is installed, otherwise
 
 - **Devices** come from `tailscale status --json`. Green dot means online. Taildrop only sends to devices logged in as you.
 - **Send**: drop files (or click the box) and each one goes out with `tailscale file cp`.
-- **Received**: every 5 seconds (or when you press *Check now*) it runs `tailscale file get` and saves anything waiting to `~/Downloads/FileShare`. Same-name files get renamed, not overwritten. Change the folder with `--downloads PATH`.
+- **Received**: every 5 seconds it runs `tailscale file get` and saves anything waiting to `~/Downloads/FileShare`. Same-name files get renamed, not overwritten. Change the folder with `--downloads PATH`.
 
 The window talks to a tiny server on `127.0.0.1` only, protected by a random per-launch token, so nothing outside your computer can use it.
 
