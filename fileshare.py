@@ -165,6 +165,13 @@ class Handler(BaseHTTPRequestHandler):
     def _route(self, method):
         url = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(url.query)
+        if method == "GET" and url.path == "/icon.svg":
+            # Public on purpose: browsers fetch favicons without our token, and it's just the logo.
+            try:
+                with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.svg"), "rb") as f:
+                    return self._send(200, f.read(), "image/svg+xml")
+            except OSError:
+                return self._send(404, b"", "text/plain")
         if method == "GET" and url.path == "/":
             if not self._authorized(query):
                 return self._send(403, b"Open FileShare from the link it printed.", "text/plain")
@@ -288,6 +295,7 @@ PAGE = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FileShare</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
 <style>
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
@@ -305,6 +313,7 @@ PAGE = r"""<!doctype html>
   header { display: flex; align-items: center; gap: 12px; padding: 14px 20px;
            border-bottom: 1px solid var(--line); background: var(--panel); }
   header h1 { font-size: 16px; margin: 0; }
+  header img { width: 28px; height: 28px; border-radius: 7px; flex: none; }
   header .me { color: var(--muted); font-size: 13px; }
   main { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px 20px; }
   @media (max-width: 680px) { main { grid-template-columns: 1fr; } }
@@ -346,6 +355,7 @@ PAGE = r"""<!doctype html>
 </head>
 <body>
 <header>
+  <img src="/icon.svg" alt="">
   <h1>FileShare</h1>
   <span class="me" id="me"></span>
 </header>
