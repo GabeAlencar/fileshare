@@ -107,6 +107,53 @@ def list_devices():
     return {"me": me, "devices": devices}
 
 
+PARTIAL_SUFFIXES = (".partial", ".crdownload", ".part", ".tmp", ".download")
+WATCH_SEEN = None      # names already in the Downloads root when we started (or already handled)
+WATCH_PENDING = {}     # name -> size on the previous poll; a file is moved once its size is stable
+
+
+def unique_path(directory, name):
+    stem, ext = os.path.splitext(name)
+    path, n = os.path.join(directory, name), 1
+    while os.path.exists(path):
+        path = os.path.join(directory, f"{stem} ({n}){ext}")
+        n += 1
+    return path
+
+
+def adopt_from_parent():
+    """On Windows/macOS the Tailscale tray app catches Taildrop files itself and saves them
+    straight into Downloads, before `tailscale file get` can. Move files that newly appear in
+    the Downloads folder (while this app is open) into DOWNLOADS. Returns the new names.
+    Note: it can't tell a Taildrop file from a browser download, so both get moved."""
+    global WATCH_SEEN
+    parent = os.path.dirname(DOWNLOADS)
+    if platform.system() not in ("Windows", "Darwin") or os.path.basename(parent) != "Downloads":
+        return []
+    current = {n for n in os.listdir(parent) if os.path.isfile(os.path.join(parent, n))}
+    if WATCH_SEEN is None:
+        WATCH_SEEN = current
+        return []
+    moved = []
+    for name in sorted(current - WATCH_SEEN):
+        src = os.path.join(parent, name)
+        if name.startswith(".") or name.lower().endswith(PARTIAL_SUFFIXES):
+            continue
+        try:
+            size = os.path.getsize(src)
+            if WATCH_PENDING.get(name) != size:
+                WATCH_PENDING[name] = size
+                continue
+            dest = unique_path(DOWNLOADS, name)
+            shutil.move(src, dest)
+        except OSError:
+            continue
+        WATCH_PENDING.pop(name, None)
+        WATCH_SEEN.add(name)
+        moved.append(os.path.basename(dest))
+    return moved
+
+
 def receive_files():
     """Pull any waiting Taildrop files into DOWNLOADS. Returns names of new files."""
     with RECEIVE_LOCK:
@@ -114,7 +161,7 @@ def receive_files():
         before = set(os.listdir(DOWNLOADS))
         run_tailscale("file", "get", "--conflict=rename", DOWNLOADS, timeout=600)
         after = set(os.listdir(DOWNLOADS))
-        return sorted(after - before)
+        return sorted((after - before) | set(adopt_from_parent()))
 
 
 def list_received():
@@ -271,6 +318,7 @@ def main():
 
     DOWNLOADS = os.path.abspath(os.path.expanduser(args.downloads))
     TAILSCALE = find_tailscale()
+    adopt_from_parent()  # snapshot the Downloads folder so only files arriving later are moved
     if not TAILSCALE:
         print("Warning: couldn't find the tailscale command; the app will show an error.")
 

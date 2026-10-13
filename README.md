@@ -32,5 +32,5 @@ The window talks to a tiny server on `127.0.0.1` only, protected by a random per
 
 ## Notes
 
-- On macOS and Windows the official Tailscale app may catch incoming files itself and put them in your Downloads folder, in which case they land there instead of in this app's list.
+- On macOS and Windows the official Tailscale app may catch incoming files itself and put them in your Downloads folder. So while FileShare is open, any file that newly appears in Downloads is moved into `Downloads/FileShare` (it can't tell a Taildrop file from a browser download, so both are moved).
 - Options: `--downloads DIR`, `--port N`, `--no-open`.
