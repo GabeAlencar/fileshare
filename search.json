@@ -1,0 +1,86 @@
+[
+  {
+    "objectID": "how-it-works.html",
+    "href": "how-it-works.html",
+    "title": "How it works",
+    "section": "",
+    "text": "FileShare is a thin layer over the tailscale command line tool."
+  },
+  {
+    "objectID": "how-it-works.html#devices",
+    "href": "how-it-works.html#devices",
+    "title": "How it works",
+    "section": "Devices",
+    "text": "Devices\nThe device list comes from tailscale status --json. A green dot means the device is online. Taildrop only sends to devices logged in as you."
+  },
+  {
+    "objectID": "how-it-works.html#sending",
+    "href": "how-it-works.html#sending",
+    "title": "How it works",
+    "section": "Sending",
+    "text": "Sending\nDrop files on the window (or click the box to pick them). Each one goes out with:\ntailscale file cp &lt;file&gt; &lt;device&gt;:"
+  },
+  {
+    "objectID": "how-it-works.html#receiving",
+    "href": "how-it-works.html#receiving",
+    "title": "How it works",
+    "section": "Receiving",
+    "text": "Receiving\nEvery 5 seconds the window asks for new files, which runs:\ntailscale file get --conflict=rename ~/Downloads/FileShare\nFiles with the same name are renamed, not overwritten.\n\n\n\n\n\n\nWindows and macOS\n\n\n\nThe official Tailscale app may catch incoming files itself and put them straight into your Downloads folder. So while FileShare is open, any file that newly appears in Downloads is moved into Downloads/FileShare. It can’t tell a Taildrop file from a browser download, so both are moved. Files that were already there when FileShare started are never touched."
+  },
+  {
+    "objectID": "how-it-works.html#security",
+    "href": "how-it-works.html#security",
+    "title": "How it works",
+    "section": "Security",
+    "text": "Security\nFileShare has no network listener of its own. The window talks to a tiny server bound to 127.0.0.1 on a random port, protected by a random per-launch token, so nothing outside your computer can use it."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "FileShare",
+    "section": "",
+    "text": "FileShare is a small desktop app for moving files between the devices on your Tailscale network. The same window checks for files other devices send you and saves them to ~/Downloads/FileShare.\nIt is built on Taildrop, Tailscale’s own file sending, so there is nothing to set up on the other side: any device running Tailscale can receive, including phones."
+  },
+  {
+    "objectID": "index.html#why-fileshare",
+    "href": "index.html#why-fileshare",
+    "title": "FileShare",
+    "section": "Why FileShare",
+    "text": "Why FileShare\n\nOne file, no installs. A single Python script using only the standard library.\nWorks on Windows, macOS and Linux. Opens in its own window when Chrome, Edge or Chromium is installed, otherwise in a browser tab.\nReceives automatically. Every 5 seconds it collects anything waiting for you.\nStays on your machine. The window talks to a tiny server on 127.0.0.1, protected by a random per-launch token.\n\nInstall FileShare View on GitHub"
+  },
+  {
+    "objectID": "install.html",
+    "href": "install.html",
+    "title": "Install and run",
+    "section": "",
+    "text": "Python 3.8 or newer\nTailscale installed and logged in\n\nThere is nothing else to install."
+  },
+  {
+    "objectID": "install.html#requirements",
+    "href": "install.html#requirements",
+    "title": "Install and run",
+    "section": "",
+    "text": "Python 3.8 or newer\nTailscale installed and logged in\n\nThere is nothing else to install."
+  },
+  {
+    "objectID": "install.html#get-it",
+    "href": "install.html#get-it",
+    "title": "Install and run",
+    "section": "Get it",
+    "text": "Get it\nDownload the repository as a ZIP, or clone it:\ngit clone https://github.com/GabeAlencar/fileshare.git"
+  },
+  {
+    "objectID": "install.html#start-it",
+    "href": "install.html#start-it",
+    "title": "Install and run",
+    "section": "Start it",
+    "text": "Start it\n\n\n\n\n\n\n\nOS\nStart it by\n\n\n\n\nWindows\ndouble-click FileShare.bat (or py fileshare.py)\n\n\nmacOS\ndouble-click FileShare.command (or python3 fileshare.py)\n\n\nLinux\n./fileshare.sh (or python3 fileshare.py)\n\n\n\nOn macOS and Linux, stop it with Ctrl+C in the terminal. On Windows, end pythonw or use the terminal version.\n\n\n\n\n\n\nLinux only, once\n\n\n\nReceiving needs permission to talk to Tailscale without sudo:\nsudo tailscale set --operator=$USER"
+  },
+  {
+    "objectID": "install.html#options",
+    "href": "install.html#options",
+    "title": "Install and run",
+    "section": "Options",
+    "text": "Options\n\n\n\n\n\n\n\nOption\nWhat it does\n\n\n\n\n--downloads DIR\nSave received files to DIR instead of ~/Downloads/FileShare\n\n\n--port N\nServe the window on port N instead of a random one\n\n\n--no-open\nDon’t open a window; just print the URL"
+  }
+]
