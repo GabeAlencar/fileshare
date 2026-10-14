@@ -1,0 +1,48 @@
+---
+title: "Install and run"
+---
+
+## Requirements
+
+- Python 3.8 or newer
+- [Tailscale](https://tailscale.com/download) installed and logged in
+
+There is nothing else to install.
+
+## Get it
+
+Download the repository as a [ZIP](https://github.com/GabeAlencar/fileshare/archive/refs/heads/main.zip),
+or clone it:
+
+```bash
+git clone https://github.com/GabeAlencar/fileshare.git
+```
+
+## Start it
+
+| OS      | Start it by                                                    |
+|---------|----------------------------------------------------------------|
+| Windows | double-click `FileShare.bat` (or `py fileshare.py`)            |
+| macOS   | double-click `FileShare.command` (or `python3 fileshare.py`)   |
+| Linux   | `./fileshare.sh` (or `python3 fileshare.py`)                   |
+
+On macOS and Linux, stop it with Ctrl+C in the terminal. On Windows, end `pythonw`
+or use the terminal version.
+
+::: {.callout-note}
+## Linux only, once
+
+Receiving needs permission to talk to Tailscale without sudo:
+
+```bash
+sudo tailscale set --operator=$USER
+```
+:::
+
+## Options
+
+| Option            | What it does                                                  |
+|-------------------|---------------------------------------------------------------|
+| `--downloads DIR` | Save received files to `DIR` instead of `~/Downloads/FileShare` |
+| `--port N`        | Serve the window on port `N` instead of a random one          |
+| `--no-open`       | Don't open a window; just print the URL                       |
