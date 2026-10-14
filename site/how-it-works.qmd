@@ -1,0 +1,44 @@
+---
+title: "How it works"
+---
+
+FileShare is a thin layer over the `tailscale` command line tool.
+
+## Devices
+
+The device list comes from `tailscale status --json`. A green dot means the device
+is online. Taildrop only sends to devices logged in as you.
+
+## Sending
+
+Drop files on the window (or click the box to pick them). Each one goes out with:
+
+```bash
+tailscale file cp <file> <device>:
+```
+
+## Receiving
+
+Every 5 seconds the window asks for new files, which runs:
+
+```bash
+tailscale file get --conflict=rename ~/Downloads/FileShare
+```
+
+Files with the same name are renamed, not overwritten.
+
+::: {.callout-tip}
+## Windows and macOS
+
+The official Tailscale app may catch incoming files itself and put them straight
+into your Downloads folder. So while FileShare is open, any file that newly appears
+in Downloads is moved into `Downloads/FileShare`. It can't tell a Taildrop file from
+a browser download, so both are moved. Files that were already there when FileShare
+started are never touched.
+:::
+
+## Security
+
+FileShare has no network listener of its own. The window talks to a tiny server
+bound to `127.0.0.1` on a random port, protected by a random per-launch token, so
+nothing outside your computer can use it.

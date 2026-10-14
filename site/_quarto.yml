@@ -1,0 +1,30 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "FileShare"
+  favicon: icon.svg
+  site-url: https://gabealencar.github.io/fileshare/
+  repo-url: https://github.com/GabeAlencar/fileshare
+  navbar:
+    logo: icon.svg
+    left:
+      - href: index.qmd
+        text: Home
+      - href: install.qmd
+        text: Install
+      - href: how-it-works.qmd
+        text: How it works
+    right:
+      - icon: github
+        href: https://github.com/GabeAlencar/fileshare
+  page-footer:
+    center: "FileShare · built on [Tailscale Taildrop](https://tailscale.com/kb/1106/taildrop)"
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    toc: true
