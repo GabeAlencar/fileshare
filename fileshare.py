@@ -10,6 +10,7 @@ Options:
     --downloads DIR   where received files are saved (default: ~/Downloads/FileShare)
     --port N          local port for the UI (default: random free port)
     --no-open         don't open a window, just print the URL
+    --quit-when-closed  exit a few minutes after the window is closed
 """
 
 import argparse
@@ -31,6 +32,7 @@ TOKEN = secrets.token_urlsafe(16)
 DOWNLOADS = None
 TAILSCALE = None
 RECEIVE_LOCK = threading.Lock()
+LAST_SEEN = None       # time of the last authorized request; drives --quit-when-closed
 
 
 # ---------------------------------------------------------------- tailscale ---
@@ -59,7 +61,10 @@ def find_tailscale():
 
 def run_tailscale(*args, timeout=600):
     if not TAILSCALE:
-        raise RuntimeError("Couldn't find the tailscale command. Is Tailscale installed?")
+        hint = ""
+        if platform.system() == "Linux" and shutil.which("pacman"):
+            hint = "\n\nInstall it with:  sudo pacman -S tailscale"
+        raise RuntimeError("Couldn't find the tailscale command. Is Tailscale installed?" + hint)
     kwargs = {}
     if platform.system() == "Windows":
         kwargs["creationflags"] = 0x08000000  # CREATE_NO_WINDOW
@@ -74,11 +79,17 @@ def run_tailscale(*args, timeout=600):
 
 def explain_error(msg):
     low = msg.lower()
+    linux = platform.system() == "Linux"
     if "access denied" in low or "permission denied" in low or "operator" in low:
-        if platform.system() == "Linux":
+        if linux:
             return msg + "\n\nFix once with:  sudo tailscale set --operator=$USER"
     if "not running" in low or "failed to connect" in low:
+        if linux:
+            # Distro packages (Arch especially) install tailscaled but don't enable it.
+            return msg + "\n\nStart Tailscale with:  sudo systemctl enable --now tailscaled\nthen log in with:  sudo tailscale up"
         return msg + "\n\nIs Tailscale running and logged in?"
+    if linux and ("logged out" in low or "needslogin" in low or "needs login" in low):
+        return msg + "\n\nLog in with:  sudo tailscale up"
     return msg
 
 
@@ -184,7 +195,33 @@ def open_path(path):
     elif system == "Darwin":
         subprocess.Popen(["open", path])
     else:
-        subprocess.Popen(["xdg-open", path])
+        # A minimal Arch install may lack xdg-utils; GNOME-ish desktops still have gio.
+        for cmd in (["xdg-open", path], ["gio", "open", path]):
+            if shutil.which(cmd[0]):
+                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return
+        raise RuntimeError(f"Couldn't open {path}: install xdg-utils (sudo pacman -S xdg-utils).")
+
+
+def default_downloads():
+    """~/Downloads/FileShare, but honor a relocated XDG download dir on Linux."""
+    home = os.path.expanduser("~")
+    base = os.path.join(home, "Downloads")
+    if platform.system() == "Linux":
+        config = os.environ.get("XDG_CONFIG_HOME") or os.path.join(home, ".config")
+        try:
+            with open(os.path.join(config, "user-dirs.dirs")) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("XDG_DOWNLOAD_DIR="):
+                        value = line.split("=", 1)[1].strip().strip('"')
+                        value = value.replace("$HOME", home)
+                        # xdg-user-dirs sets it to $HOME itself when there's no Downloads folder.
+                        if value and os.path.abspath(value) != os.path.abspath(home):
+                            base = value
+        except OSError:
+            pass
+    return os.path.join(base, "FileShare")
 
 
 # ---------------------------------------------------------------------- web ---
@@ -226,6 +263,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, page, "text/html; charset=utf-8")
         if not self._authorized(query):
             return self._send(403, {"error": "forbidden"})
+        global LAST_SEEN
+        LAST_SEEN = time.time()
         try:
             if method == "GET" and url.path == "/api/devices":
                 return self._send(200, list_devices())
@@ -295,8 +334,11 @@ def open_window(url):
             "/Applications/Chromium.app/Contents/MacOS/Chromium",
         ]
     else:
+        # Arch package names first (chromium, AUR google-chrome / microsoft-edge-stable-bin / brave-bin).
         candidates = [shutil.which(n) for n in
-                      ("google-chrome", "chromium", "chromium-browser", "microsoft-edge")]
+                      ("chromium", "google-chrome-stable", "google-chrome", "chromium-browser",
+                       "microsoft-edge-stable", "microsoft-edge", "brave", "brave-browser",
+                       "vivaldi-stable")]
     for exe in candidates:
         if exe and os.path.isfile(exe):
             try:
@@ -308,12 +350,25 @@ def open_window(url):
     webbrowser.open(url)
 
 
+def quit_when_idle(server, idle):
+    """Stop once the window has been gone for `idle` seconds. The page polls every 5s, but
+    browsers throttle hidden/minimized windows to about once a minute, so `idle` stays generous.
+    Used by launchers that have no terminal to Ctrl+C (the Linux desktop entry)."""
+    while True:
+        time.sleep(10)
+        if LAST_SEEN is not None and time.time() - LAST_SEEN > idle:
+            server.shutdown()
+            return
+
+
 def main():
     global DOWNLOADS, TAILSCALE
     parser = argparse.ArgumentParser(description="Drag-and-drop file sharing over Tailscale.")
-    parser.add_argument("--downloads", default=os.path.join(os.path.expanduser("~"), "Downloads", "FileShare"))
+    parser.add_argument("--downloads", default=default_downloads())
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--no-open", action="store_true")
+    parser.add_argument("--quit-when-closed", action="store_true",
+                        help="exit a few minutes after the window is closed")
     args = parser.parse_args()
 
     DOWNLOADS = os.path.abspath(os.path.expanduser(args.downloads))
@@ -329,6 +384,8 @@ def main():
     print("Press Ctrl+C to quit.")
     if not args.no_open:
         threading.Timer(0.3, open_window, args=(url,)).start()
+    if args.quit_when_closed:
+        threading.Thread(target=quit_when_idle, args=(server, 180), daemon=True).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
